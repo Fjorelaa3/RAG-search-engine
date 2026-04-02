@@ -1,0 +1,19 @@
+# Data outputs
+data/
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# ChromaDB local storage
+chroma_db/
+
+# OS
+.DS_Store
+Thumbs.db
