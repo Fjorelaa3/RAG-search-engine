@@ -1,7 +1,9 @@
 import html
+import logging
 import time
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 HN_BASE = "https://hacker-news.firebaseio.com/v0"
@@ -14,7 +16,7 @@ class HackerNewsScraper:
         """Fetch up to `limit` stories from Hacker News."""
         ids_response = requests.get(f"{HN_BASE}/topstories.json", headers=HEADERS, timeout=10)
         if ids_response.status_code != 200:
-            print(f"Could not fetch HN story IDs: HTTP {ids_response.status_code}")
+            logger.warning(f"Could not fetch HN story IDs: HTTP {ids_response.status_code}")
             return []
 
         story_ids = ids_response.json()[:limit]

@@ -1,4 +1,6 @@
+import csv
 import logging
+import os
 
 from sqlalchemy.orm import Session
 
@@ -10,8 +12,19 @@ from app.scrapers.hackernews import HackerNewsScraper
 from app.scrapers.arxiv import ArxivScraper
 from app.scrapers.openlibrary import OpenLibraryScraper
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def save_to_csv(articles: list[dict], path: str) -> None:
+    """Save scraped articles to a CSV file for inspection. Skips if file already exists."""
+    if not articles or os.path.exists(path):
+        return
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=articles[0].keys())
+        writer.writeheader()
+        writer.writerows(articles)
+    logger.info(f"Saved {len(articles)} records to {path}")
 
 
 def save_articles(db: Session, articles: list[dict]) -> int:
@@ -47,6 +60,9 @@ def scrape_and_load(db: Session) -> None:
         logger.info(f"Scraping {name}...")
         try:
             articles = scraper.fetch(**kwargs)
+            # Save to CSV for inspection (only on first run, skips if file exists)
+            csv_path = f"data/{name.lower().replace('.', '').replace(' ', '_')}.csv"
+            save_to_csv(articles, csv_path)
             count = save_articles(db, articles)
             logger.info(f"{name}: saved {count} new articles")
         except Exception as e:

@@ -1,6 +1,8 @@
+import logging
 import xml.etree.ElementTree as ET
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 ARXIV_NS = "http://www.w3.org/2005/Atom"
@@ -14,7 +16,7 @@ class ArxivScraper:
         url = f"https://export.arxiv.org/api/query?search_query=cat:{category}&max_results={max_results}"
         response = requests.get(url, headers=HEADERS, timeout=15)
         if response.status_code != 200:
-            print(f"Could not fetch arXiv papers: HTTP {response.status_code}")
+            logger.warning(f"Could not fetch arXiv papers: HTTP {response.status_code}")
             return []
 
         root = ET.fromstring(response.content)

@@ -1,6 +1,8 @@
+import logging
 import time
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 
@@ -17,7 +19,7 @@ class RedditScraper:
             url = f"https://www.reddit.com/r/{sub}/top.json?limit={limit}&t=month"
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code != 200:
-                print(f"Skipping r/{sub}: HTTP {response.status_code}")
+                logger.warning(f"Skipping r/{sub}: HTTP {response.status_code}")
                 continue
             posts = response.json().get("data", {}).get("children", [])
             for post in posts:

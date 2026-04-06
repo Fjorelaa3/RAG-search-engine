@@ -14,7 +14,7 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 def build_prompt(query: str, articles: list[dict]) -> str:
-    """Build a prompt for the LLM using the query and retrieved articles."""
+    """Build a prompt instructing the LLM to answer using only the provided article context."""
     context = ""
     for i, article in enumerate(articles, 1):
         context += f"[{i}] {article['title']}\n{article['snippet']}\nSource: {article['url']}\n\n"
@@ -32,7 +32,7 @@ Answer:"""
 
 
 def call_llm(prompt: str) -> str:
-    """Call the LLM API and return the generated answer."""
+    """Send the prompt to the configured LLM API and return the generated answer."""
     response = requests.post(
         f"{OPENAI_BASE_URL}/chat/completions",
         headers={
@@ -55,7 +55,7 @@ def rag_search(query: str, db: Session, top_k: int = 5) -> dict:
     Falls back to top article summary if no LLM is configured.
     """
     # Step 1: retrieve the most relevant articles
-    results = search_articles(query, top_k)
+    results = search_articles(query, top_k, db=db)
 
     if not results:
         return {

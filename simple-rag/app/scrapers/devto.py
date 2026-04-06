@@ -1,6 +1,8 @@
+import logging
 import time
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 
@@ -17,7 +19,7 @@ class DevtoScraper:
             url = f"https://dev.to/api/articles?tag={tag}&per_page={limit}"
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code != 200:
-                print(f"Skipping tag '{tag}': HTTP {response.status_code}")
+                logger.warning(f"Skipping tag '{tag}': HTTP {response.status_code}")
                 continue
             for item in response.json():
                 articles.append({

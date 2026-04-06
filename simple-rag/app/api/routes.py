@@ -1,5 +1,9 @@
+import csv
+import io
 import logging
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -58,9 +62,14 @@ def get_stats(db: Session = Depends(get_db)):
 
 
 @router.post("/search", response_model=SearchResponse)
-def search(request: SearchRequest):
-    """Search articles semantically."""
-    raw_results = search_articles(request.query, request.top_k)
+def search(
+    request: SearchRequest,
+    source: str | None = None,
+    date_from: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Search articles semantically with optional source and date filters."""
+    raw_results = search_articles(request.query, request.top_k, source=source, date_from=date_from, db=db)
     results = [SearchResult(**r) for r in raw_results]
     return SearchResponse(query=request.query, results=results)
 
@@ -68,3 +77,52 @@ def search(request: SearchRequest):
 def rag_search_endpoint(request: SearchRequest, db: Session = Depends(get_db)):
     """Answer a question using RAG — retrieval + AI generation."""
     return rag_search(request.query, db, request.top_k)
+
+@router.get("/export")
+def export_articles(format: str = "csv", db: Session = Depends(get_db)):
+    """Export all articles as CSV or JSONL download."""
+    articles = db.query(Article).all()
+
+    if format == "jsonl":
+        def jsonl_generator():
+            import json
+            for article in articles:
+                yield json.dumps({
+                    "id": article.id,
+                    "source": article.source,
+                    "title": article.title,
+                    "url": article.url,
+                    "content": article.content,
+                    "author": article.author,
+                    "scraped_at": article.scraped_at.isoformat(),
+                }) + "\n"
+        return StreamingResponse(
+            jsonl_generator(),
+            media_type="application/x-ndjson",
+            headers={"Content-Disposition": "attachment; filename=articles.jsonl"}
+        )
+
+    # Default: CSV
+    def csv_generator():
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=["id", "source", "title", "url", "author", "scraped_at"])
+        writer.writeheader()
+        yield output.getvalue()
+        for article in articles:
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=["id", "source", "title", "url", "author", "scraped_at"])
+            writer.writerow({
+                "id": article.id,
+                "source": article.source,
+                "title": article.title,
+                "url": article.url,
+                "author": article.author,
+                "scraped_at": article.scraped_at.isoformat(),
+            })
+            yield output.getvalue()
+
+    return StreamingResponse(
+        csv_generator(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=articles.csv"}
+    )

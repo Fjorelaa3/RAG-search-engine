@@ -1,5 +1,7 @@
+import logging
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 
@@ -12,7 +14,7 @@ class OpenLibraryScraper:
         url = f"https://openlibrary.org/search.json?q={query.replace(' ', '+')}&limit={limit}"
         response = requests.get(url, headers=HEADERS, timeout=30)
         if response.status_code != 200:
-            print(f"Could not fetch OpenLibrary books: HTTP {response.status_code}")
+            logger.warning(f"Could not fetch OpenLibrary books: HTTP {response.status_code}")
             return []
 
         docs = response.json().get("docs", [])

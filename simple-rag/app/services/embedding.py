@@ -54,21 +54,30 @@ def embed_all_articles(db: Session) -> None:
 
     logger.info(f"Embedded {processed} new articles, skipped {skipped} already indexed")
 
-def search_articles(query: str, top_k: int = 5) -> list[dict[str, Any]]:
-    """Search for articles semantically similar to the query."""
+def search_articles(
+    query: str,
+    top_k: int = 5,
+    source: str | None = None,
+    date_from: str | None = None,
+    db=None,
+) -> list[dict[str, Any]]:
+    """Search for articles semantically similar to the query, with optional filters."""
     # Convert the search query to an embedding
     query_embedding = MODEL.encode(query).tolist()
 
-    # Find the top_k most similar articles in ChromaDB
+    # Fetch more results than needed so we have enough after filtering
+    fetch_k = top_k * 4 if (source or date_from) else top_k
+
+    # Find the most similar articles in ChromaDB
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=top_k,
+        n_results=min(fetch_k, collection.count()),
     )
 
-    # Package results into a clean list of dicts
+    # Package results into a clean list of dicts, applying filters
     articles = []
     for i in range(len(results["ids"][0])):
-        articles.append({
+        article = {
             "id": results["ids"][0][i],
             "title": results["metadatas"][0][i]["title"],
             "url": results["metadatas"][0][i]["url"],
@@ -76,6 +85,24 @@ def search_articles(query: str, top_k: int = 5) -> list[dict[str, Any]]:
             "author": results["metadatas"][0][i]["author"],
             "snippet": results["documents"][0][i],
             "score": 1 - results["distances"][0][i],
-        })
+        }
+
+        # Apply source filter
+        if source and article["source"] != source:
+            continue
+
+        # Apply date filter using scraped_at from SQLite
+        if date_from and db:
+            from app.models import Article as ArticleModel
+            from datetime import datetime
+            db_article = db.query(ArticleModel).filter(ArticleModel.id == article["id"]).first()
+            if db_article:
+                cutoff = datetime.fromisoformat(date_from)
+                if db_article.scraped_at < cutoff:
+                    continue
+
+        articles.append(article)
+        if len(articles) == top_k:
+            break
 
     return articles

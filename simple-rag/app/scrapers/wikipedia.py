@@ -1,6 +1,8 @@
+import logging
 import time
 import requests
 
+logger = logging.getLogger(__name__)
 
 HEADERS = {"User-Agent": "RAGSearchBot/1.0"}
 
@@ -28,7 +30,7 @@ class WikipediaScraper:
             url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{slug}"
             response = requests.get(url, headers=HEADERS, timeout=10)
             if response.status_code != 200:
-                print(f"Skipping {slug}: HTTP {response.status_code}")
+                logger.warning(f"Skipping {slug}: HTTP {response.status_code}")
                 continue
             data = response.json()
             articles.append({
