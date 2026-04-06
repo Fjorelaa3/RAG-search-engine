@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.models import Article, get_db
-from app.schemas import ArticleOut, ArticleList, SearchRequest, SearchResponse, SearchResult
+from app.schemas import ArticleOut, ArticleList, SearchRequest, SearchResponse, SearchResult, RagResponse
 from app.services.embedding import search_articles
+from app.services.rag import rag_search
 
 logger = logging.getLogger(__name__)
 
@@ -62,3 +63,8 @@ def search(request: SearchRequest):
     raw_results = search_articles(request.query, request.top_k)
     results = [SearchResult(**r) for r in raw_results]
     return SearchResponse(query=request.query, results=results)
+
+@router.post("/rag-search", response_model=RagResponse)
+def rag_search_endpoint(request: SearchRequest, db: Session = Depends(get_db)):
+    """Answer a question using RAG — retrieval + AI generation."""
+    return rag_search(request.query, db, request.top_k)

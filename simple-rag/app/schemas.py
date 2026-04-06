@@ -44,3 +44,17 @@ class SearchResponse(BaseModel):
     """Schema for returning search results."""
     query: str
     results: list[SearchResult]
+
+class RagSource(BaseModel):
+    """Schema for a single source used in a RAG response."""
+    title: str
+    url: str
+    score: float
+
+
+class RagResponse(BaseModel):
+    """Schema for the RAG search response."""
+    query: str
+    answer: str
+    sources: list[RagSource]
+    confidence: float
