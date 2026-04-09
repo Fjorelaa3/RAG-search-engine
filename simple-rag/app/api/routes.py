@@ -2,14 +2,15 @@ import csv
 import io
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.models import Article, get_db
 from app.schemas import ArticleOut, ArticleList, SearchRequest, SearchResponse, SearchResult, RagResponse
-from app.services.embedding import search_articles
+from app.services.embedding import search_articles, embed_all_articles
+from app.services.ingestion import scrape_and_load
 from app.services.rag import rag_search
 
 logger = logging.getLogger(__name__)
@@ -23,9 +24,9 @@ def health_check():
 
 @router.get("/articles", response_model=ArticleList)
 def list_articles(
-    page: int = 1,
-    page_size: int = 10,
-    db: Session = Depends(get_db)
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
+    db: Session = Depends(get_db),
 ):
     """Return a paginated list of articles."""
     total = db.query(Article).count()
@@ -77,6 +78,17 @@ def search(
 def rag_search_endpoint(request: SearchRequest, db: Session = Depends(get_db)):
     """Answer a question using RAG — retrieval + AI generation."""
     return rag_search(request.query, db, request.top_k)
+
+@router.post("/ingest")
+def trigger_ingest(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Trigger scraping and embedding in the background."""
+    def run():
+        scrape_and_load(db)
+        embed_all_articles(db)
+
+    background_tasks.add_task(run)
+    return {"status": "ingestion started"}
+
 
 @router.get("/export")
 def export_articles(format: str = "csv", db: Session = Depends(get_db)):

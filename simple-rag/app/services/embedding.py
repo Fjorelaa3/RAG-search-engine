@@ -71,7 +71,7 @@ def search_articles(
     # Find the most similar articles in ChromaDB
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=min(fetch_k, collection.count()),
+        n_results=fetch_k,
     )
 
     # Package results into a clean list of dicts, applying filters
