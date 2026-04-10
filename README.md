@@ -10,8 +10,10 @@ The app is deployed and accessible at:
 
 **https://rag-search-engine.fly.dev**
 
-- API docs: https://rag-search-engine.fly.dev/docs
+- Interactive API docs (Swagger): https://rag-search-engine.fly.dev/docs
 - Health check: https://rag-search-engine.fly.dev/health
+
+> The app is hosted on Fly.io's free tier and may take 10–15 seconds to wake up on the first request after a period of inactivity.
 
 ---
 
@@ -238,30 +240,6 @@ simple-rag/
 ├── .env.example             # Environment variable template
 ├── fly.toml                 # Fly.io deployment configuration
 └── pytest.ini               # Pytest configuration
-```
-
----
-
-## Deploying to Fly.io
-
-The app is already configured for Fly.io via `fly.toml`. To deploy your own instance:
-
-1. Install the Fly CLI from [fly.io](https://fly.io)
-2. Log in:
-```bash
-flyctl auth login
-```
-3. Launch the app:
-```bash
-flyctl launch
-```
-4. Set your LLM key as a secret:
-```bash
-flyctl secrets set OPENAI_API_KEY=your-key-here
-```
-5. Trigger ingestion on the live server:
-```bash
-curl -X POST https://your-app.fly.dev/ingest
 ```
 
 ---
