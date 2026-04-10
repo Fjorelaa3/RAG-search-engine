@@ -84,7 +84,7 @@ def search_articles(
             "source": results["metadatas"][0][i]["source"],
             "author": results["metadatas"][0][i]["author"],
             "snippet": results["documents"][0][i],
-            "score": 1 - results["distances"][0][i],
+            "score": round(1 / (1 + results["distances"][0][i]), 4),
         }
 
         # Apply source filter

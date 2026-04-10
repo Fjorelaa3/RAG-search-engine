@@ -23,6 +23,7 @@ class Article(Base):
     content = Column(Text, nullable=False)
     author = Column(String, nullable=True)
     scraped_at = Column(DateTime, default=datetime.utcnow)
+    tags = Column(String, nullable=True, default="")
 
 def get_db():
     """Open a db session,yield it and then close it when done"""

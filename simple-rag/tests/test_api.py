@@ -155,7 +155,7 @@ def test_rag_search_llm_path():
     """RAG search calls LLM when API key is set."""
     db = TestingSessionLocal()
     with patch("app.services.rag.search_articles", return_value=FAKE_SEARCH_RESULTS), \
-         patch("app.services.rag.OPENAI_API_KEY", "fake-key"), \
+         patch("app.services.rag.OPENAI_API_KEY", return_value="fake-key"), \
          patch("app.services.rag.call_llm", return_value="Mocked LLM answer") as mock_llm:
         result = rag_search("machine learning", db, top_k=1)
         assert result["answer"] == "Mocked LLM answer"

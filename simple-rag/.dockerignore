@@ -1,0 +1,29 @@
+# flyctl launch added from .gitignore
+# Data outputs
+**\data
+**\*.db
+
+# Python
+**\__pycache__
+**\*.py[cod]
+**\.venv
+**\venv
+
+# Environment variables
+**\.env
+
+# ChromaDB local storage
+**\chroma_db
+
+# OS
+**\.DS_Store
+**\Thumbs.db
+
+# flyctl launch added from .pytest_cache\.gitignore
+# Created by pytest automatically.
+.pytest_cache\**\*
+
+# flyctl launch added from .venv\Lib\site-packages\chromadb\proto\.gitignore
+.venv\Lib\site-packages\chromadb\proto\**\*_pb2.py*
+.venv\Lib\site-packages\chromadb\proto\**\*_pb2_grpc.py
+fly.toml

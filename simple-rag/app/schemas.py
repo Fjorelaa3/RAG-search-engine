@@ -11,6 +11,7 @@ class ArticleOut(BaseModel):
     content: str
     author: str | None
     scraped_at: datetime
+    tags: str | None
 
     model_config = {"from_attributes": True}
 

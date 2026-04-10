@@ -11,7 +11,9 @@ from app.models import Article, get_db
 from app.schemas import ArticleOut, ArticleList, SearchRequest, SearchResponse, SearchResult, RagResponse
 from app.services.embedding import search_articles, embed_all_articles
 from app.services.ingestion import scrape_and_load
-from app.services.rag import rag_search
+from app.services.rag import rag_search, build_prompt
+import requests
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -26,16 +28,15 @@ def health_check():
 def list_articles(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=100),
+    tag: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    """Return a paginated list of articles."""
-    total = db.query(Article).count()
-    articles = (
-        db.query(Article)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
-        .all()
-    )
+    """Return a paginated list of articles, optionally filtered by tag."""
+    query = db.query(Article)
+    if tag:
+        query = query.filter(Article.tags.ilike(f"%{tag}%"))
+    total = query.count()
+    articles = query.offset((page - 1) * page_size).limit(page_size).all()
     return ArticleList(articles=articles, total=total, page=page, page_size=page_size)
 
 
@@ -78,6 +79,43 @@ def search(
 def rag_search_endpoint(request: SearchRequest, db: Session = Depends(get_db)):
     """Answer a question using RAG — retrieval + AI generation."""
     return rag_search(request.query, db, request.top_k)
+
+@router.post("/rag-search/stream")
+def rag_search_stream(request: SearchRequest, db: Session = Depends(get_db)):
+    """Stream the RAG answer token by token via SSE."""
+    results = search_articles(request.query, request.top_k, db=db)
+
+    if not results:
+        def empty_stream():
+            yield "data: No relevant articles found.\n\n"
+        return StreamingResponse(empty_stream(), media_type="text/event-stream")
+
+    prompt = build_prompt(request.query, results)
+
+    def event_stream():
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        model = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+        response = requests.post(
+            f"{base_url}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": True,
+            },
+            stream=True,
+            timeout=60,
+        )
+        for line in response.iter_lines():
+            if line and line.startswith(b"data: "):
+                yield f"{line.decode()}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
 
 @router.post("/ingest")
 def trigger_ingest(background_tasks: BackgroundTasks, db: Session = Depends(get_db)):

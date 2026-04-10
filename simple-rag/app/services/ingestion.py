@@ -15,6 +15,29 @@ from app.scrapers.openlibrary import OpenLibraryScraper
 logger = logging.getLogger(__name__)
 
 
+def build_tag_prompt(title: str, content: str) -> str:
+    return f"""Given the article below, return 3-5 topic tags as a comma-separated list.
+Only return the tags, nothing else.
+
+Title: {title}
+Content: {content[:500]}
+
+Tags:"""
+
+
+def generate_tags(title: str, content: str) -> str:
+    """Call the LLM to generate tags for an article. Returns empty string if no LLM key."""
+    from app.services.rag import call_llm, OPENAI_API_KEY
+    if not OPENAI_API_KEY():
+        return ""
+    try:
+        prompt = build_tag_prompt(title, content)
+        return call_llm(prompt).strip()
+    except Exception as e:
+        logger.warning(f"Tag generation failed: {e}")
+        return ""
+
+
 def save_to_csv(articles: list[dict], path: str) -> None:
     """Save scraped articles to a CSV file for inspection. Skips if file already exists."""
     if not articles or os.path.exists(path):
@@ -39,7 +62,8 @@ def save_articles(db: Session, articles: list[dict]) -> int:
         existing = db.query(Article).filter(Article.url == url).first()
         if existing:
             continue
-        db.add(Article(**article))
+        tags = generate_tags(article.get("title", ""), article.get("content", ""))
+        db.add(Article(**article, tags=tags))
         saved += 1
     db.commit()
     return saved

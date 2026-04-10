@@ -9,9 +9,14 @@ from app.services.embedding import search_articles
 
 logger = logging.getLogger(__name__)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
-OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
+def OPENAI_API_KEY():
+    return os.getenv("OPENAI_API_KEY", "")
+
+def OPENAI_BASE_URL():
+    return os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+
+def OPENAI_MODEL():
+    return os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 
 def build_prompt(query: str, articles: list[dict]) -> str:
     """Build a prompt instructing the LLM to answer using only the provided article context."""
@@ -34,17 +39,17 @@ Answer:"""
 def call_llm(prompt: str) -> str:
     """Send the prompt to the configured LLM API and return the generated answer."""
     response = requests.post(
-        f"{OPENAI_BASE_URL}/chat/completions",
+        f"{OPENAI_BASE_URL()}/chat/completions",
         headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "Authorization": f"Bearer {OPENAI_API_KEY()}",
             "Content-Type": "application/json",
         },
         json={
-            "model": OPENAI_MODEL,
+            "model": OPENAI_MODEL(),
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.3,
         },
-        timeout=30,
+        timeout=120,
     )
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
@@ -80,7 +85,7 @@ def rag_search(query: str, db: Session, top_k: int = 5) -> dict:
     confidence = results[0]["score"]
 
     # Step 3: if no LLM key, return summary of top article
-    if not OPENAI_API_KEY:
+    if not OPENAI_API_KEY():
         logger.info("No LLM key configured, returning fallback summary")
         top = results[0]
         return {
